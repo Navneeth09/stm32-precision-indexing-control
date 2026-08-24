@@ -1,0 +1,62 @@
+# =========================================================================
+# GITIGNORE FOR PROJECT 2 — STM32 PRECISION INDEXING & FEED CONTROL
+# =========================================================================
+
+# --- MATLAB & Simulink Cache Files ---
+*.slxc
+slprj/
+*.asv
+*.m~
+*.mat~
+*.mex*
+*.p
+*.fig~
+
+# --- Simulink Code Generation & Build Artifacts ---
+*_grt_rtw/
+*_ert_rtw/
+*_sfctr/
+sf_prj/
+codegen/
+build/
+
+# --- MATLAB System & Crash Logs ---
+matlab_crash.*
+matlab.log
+*.log
+
+# --- IDE & Editor Files ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Antigravity / Gemini AI Workspace Files ---
+.gemini/
+.agents/
+
+# --- Python Cache & Virtual Environments ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# --- OS Specific Files ---
+Thumbs.db
+Desktop.ini
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Do NOT Ignore Essential Stage 1 Artifacts ---
+!models/*.slx
+!scripts/*.m
+!scripts/*.py
+!results/stage1/*.mat
+!results/stage1/*.png
+!plots/stage1/*.png
