@@ -1,4 +1,4 @@
-# Project 2 — STM32 Automated Precision Indexing & Feed Control
+STM32 Automated Precision Indexing & Feed Control
 
 [![Stage 1 Status](https://img.shields.io/badge/Stage_1-Simulation_Prototype_Verified-success.svg)](#stage-1-scope)
 [![MATLAB/Simulink](https://img.shields.io/badge/MATLAB-R2023b%20%7C%20R2024a%20%7C%20R2025a-blue.svg)](https://www.mathworks.com/)
