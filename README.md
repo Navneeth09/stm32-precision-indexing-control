@@ -216,7 +216,7 @@ Every step in Stage 1 was evaluated in MATLAB R2025a using ODE45 simulations and
 | Step | Technical Objective | Key Measured Simulation Metric | Target / Acceptance Limit | Verdict |
 | :--- | :--- | :--- | :--- | :--- |
 | ** 1** | Motor Plant Steady-State Speed | $\omega_{ss} = 239.4710\text{ rad/s}$ ($2286.78\text{ RPM}$) | Relative Speed Error $\le 0.05\%$ ($0.0209\%$ err) | **PASS** |
-| ** 2** | Encoder Quantization Bound | $|e_{true}|_{max} = 0.3599^\circ \le 0.3600^\circ$ | Position Error $\le 1.0\text{ count}$ ($0.3600^\circ$) | **PASS** |
+| **2** | Encoder Quantization Bound | $\lvert e_{true}\rvert_{max} = 0.3599^\circ$ | Position Error $\le 1.0$ count ($0.3600^\circ$) | **PASS** |
 | ** 3** | Averaged PWM Actuation Linearity | $d=0.75 \implies \omega_{ss}=179.6033\text{ rad/s}$ | Linearity Ratio Error $\le 0.01\%$ ($0.0000\%$ err) | **PASS** |
 | ** 4** | Continuous Closed-Loop Step Response | Overshoot $= 0.00\%$, $t_s = 78.4\text{ ms}$, $e_{ss} = 0.0384^\circ$ | Overshoot $< 2.0\%$, $e_{ss} \le 0.3600^\circ$ | **PASS** |
 | ** 5** | 1 kHz Discrete PID Trajectory Profiling | $\|e_{true}\|_{max} = 0.4456^\circ$, $i_{peak} = 0.0506\text{ A}$ | $\|e\|_{max} \le 1.7200^\circ$, $i_{peak} \le 1.50\text{ A}$ | **PASS** |
