@@ -1,915 +1,357 @@
----
+# Project 2 — STM32 Automated Precision Indexing & Feed Control System
 
-# 2. Problem Statement
-
-Precision indexing systems are commonly used in applications where a mechanism must repeatedly move to predefined positions.
-
-Examples include:
-
-- Automated feeding mechanisms
-- Rotary indexing systems
-- Industrial positioning systems
-- Material handling equipment
-- Automated machine tools
-- Robotics
-- Pick-and-place mechanisms
-- Electromechanical actuators
-
-A simple open-loop motor command is not sufficient when accurate positioning is required.
-
-For example, the same PWM command can produce different motion depending on:
-
-- Motor operating condition
-- Mechanical load
-- Friction
-- Payload inertia
-- External disturbances
-- Encoder resolution
-
-Therefore, the system needs a **closed-loop control architecture**.
-
-The core problem addressed by this project is:
-
-> **How can a motor-driven indexing mechanism achieve accurate and repeatable angular positioning while remaining robust to encoder quantization, friction, load disturbances, and mechanical parameter variations, and how can the resulting controller eventually be transferred to an STM32-based embedded system?**
+A modeling, control design, and simulation baseline for precision rotary indexing tables, tool changers, and automated feed mechanisms driven by DC motor actuators.
 
 ---
 
-# 3. Why This Project Is Needed
+## 1. Overview & Motivation
+In automated manufacturing, CNC machinery, and robotics, precision rotary indexing tables and feed mechanisms are required to move an end-effector or workpiece to exact angular positions, hold that position under external cutting torques or load forces, and repeat the motion quickly without overshooting.
 
-A controller that works only under ideal simulation conditions is not enough for an embedded control application.
+Achieving sub-degree positioning accuracy in a real electromechanical system is non-trivial. A practical motor system does not respond instantaneously to position commands. Instead, performance is governed by physical constraints:
+* **Electrical dynamics:** Armature resistance ($R$) and inductance ($L$) limit current rise time.
+* **Mechanical dynamics:** Rotor and load inertia ($J$) and viscous damping ($B$) dictate acceleration limits.
+* **Actuation boundaries:** Driver power supplies ($V_{dc}$) impose hard voltage and duty cycle limits.
+* **Measurement quantization:** Incremental optical encoders discretize continuous shaft angles into integer count steps.
+* **Non-linear friction:** Static stiction breakaway torque and dynamic Coulomb sliding friction cause positioning deadbands and stick-slip motion.
+* **External load disturbances:** Machining forces, part placement, or gravity torques corrupt position tracking during move and dwell phases.
 
-A practical system has a chain of imperfections:
+This project develops a high-precision closed-loop position control architecture designed specifically for microcontroller deployment (such as the STM32 32-bit MCU platform). 
+
+Currently, **Stage 1 (Simulink Simulation Prototype)** of the project is complete, fully verified, and frozen in this repository.
+
+---
+
+## 2. Problem Statement
+In basic control textbooks, position control is often depicted as a simple linear feedback loop:
+
+$$\text{Commanded Angle } \theta_{ref} \longrightarrow \text{Controller} \longrightarrow \text{Motor Plant} \longrightarrow \text{Position } \theta$$
+
+In an actual precision indexing machine, the true signal flow involves several physical and discrete conversion boundaries:
+
+```
+Commanded Angle theta_ref
+        │
+        ▼
+Trapezoidal Trajectory Generator (a_max, w_max)
+        │
+        ▼
+Discrete Controller (1 kHz sampling, Ts = 1 ms)
+        │
+        ▼
+PWM / Motor Drive (Duty cycle d in [0, 1], V_eff = d * V_dc)
+        │
+        ▼
+DC Motor Electromechanical Plant (V_eff = L di/dt + R i + Ke w, T_e = Kt i)
+        │
+        ▼
+Mechanical Shaft & Load Torque / Friction Integration (J d w/dt = T_e - T_L - T_fric - B w)
+        │
+        ▼
+Optical Quadrature Encoder (Floor quantization floor(N_c))
+        │
+        ▼
+Quantized Feedback Angle theta_enc (Feedback to Controller)
+```
+
+### Spatial Quantization Impact
+Consider the 1000 CPR (Counts Per Revolution) optical encoder used in this system (derived from a 250 PPR quadrature optical disk):
+
+$$\Delta \theta_{res} = \frac{360^\circ}{1000 \text{ counts}} = 0.3600^\circ/\text{count} \quad (0.006283185 \text{ rad/count})$$
+
+Because the controller only observes the quantized angle $\theta_{enc}$, any physical position error below $0.3600^\circ$ produces zero encoder count changes. The controller cannot "see" sub-count deviations without additional integral action or feedforward compensation. Understanding and bounding these discrete quantization effects is critical before building hardware.
+
+---
+
+## 3. Proposed Solution
+To achieve sub-degree indexing accuracy and zero overshoot without relying on trial-and-error hardware tuning, the proposed solution follows a structured three-phase development methodology:
+
+1. **Model-Based Simulation (Stage 1):** Derive continuous motor plant differential equations, model encoder spatial quantization, simulate averaged PWM voltage limits, and design a discrete 1 kHz PID controller augmented with kinematic profile feedforward and physics-based disturbance/friction compensation.
+2. **Embedded MCU Transition (Stage 2 — Planned):** Translate validated control algorithms into fixed-point/floating-point C code for STM32 microcontrollers, replacing simulation-level oracle signals with a real-time **Disturbance Observer (DOB)** and discrete velocity filters.
+3. **Physical Hardware Validation (Stage 3 — Planned):** Deploy the C firmware onto an STM32 MCU board interfaced with an H-Bridge driver, DC gearmotor, and optical quadrature encoder to measure real-world performance against the simulation baseline.
+
+---
+
+## 4. Why Simulation Before Hardware?
+Attempting to tune high-gain position controllers directly on physical hardware often leads to confusing diagnostics. When a physical motor overshoots, oscillates, or exhibits steady-state error, it is difficult to isolate whether the root cause is:
+* Controller gain instability
+* Encoder quantization chatter
+* PWM duty cycle saturation
+* MCU sampling jitter or timing delays
+* Mechanical backlash, friction, or flexure
+* Voltage drops in the driver power supply
+
+By building and validating **Stage 1 as a baseline simulation prototype**, every dynamic block is isolated and verified independently. The exact mathematical limits of the controller are established in a controlled environment before physical hardware constraints are introduced.
+
+---
+
+## 5. Complete Project Roadmap
+
+```mermaid
+flowchart TD
+    subgraph STAGE1 ["STAGE 1 — Simulation Prototype (COMPLETED / FROZEN)"]
+        S1["Step 1: Motor Plant ODEs"] --> S2["Step 2: Encoder Quantization"]
+        S2 --> S3["Step 3: Averaged PWM Driver"]
+        S3 --> S4["Step 4: Continuous PID Control"]
+        S4 --> S5["Step 5: 1 kHz Discrete PID & Profile"]
+        S5 --> S6["Step 6: Robustness, Friction & Load Feedforward"]
+    end
+
+    subgraph STAGE2 ["STAGE 2 — Embedded STM32 Implementation (PLANNED)"]
+        S2_1["Disturbance Observer (DOB) Design"] --> S2_2["Discrete Velocity Filter hat(w)"]
+        S2_2 --> S2_3["STM32 Embedded C Translation"]
+        S2_3 --> S2_4["Hardware-in-the-Loop / PIL Testing"]
+    end
+
+    subgraph STAGE3 ["STAGE 3 — Hardware Implementation (PLANNED)"]
+        S3_1["STM32 Microcontroller Board"] --> S3_2["H-Bridge Driver & DC Motor"]
+        S3_2 --> S3_3["1000 CPR Encoder Feedback"]
+        S3_3 --> S3_4["Experimental Bench Validation"]
+    end
+
+    STAGE1 ==> STAGE2
+    STAGE2 ==> STAGE3
+
+    style STAGE1 fill:#1b4332,stroke:#40916c,stroke-width:2px,color:#fff
+    style STAGE2 fill:#2b2d42,stroke:#8d99ae,stroke-width:1px,color:#fff
+    style STAGE3 fill:#2b2d42,stroke:#8d99ae,stroke-width:1px,color:#fff
+```
+
+> **Current Repository Scope Notice:**  
+> This repository contains **STAGE 1 ONLY**. Stages 2 and 3 are future roadmap milestones.
+
+---
+
+## 6. Stage 1 — Simulation Prototype Architecture
+
+Stage 1 consists of six progressive technical steps executed in MATLAB/Simulink:
+
+```mermaid
+flowchart LR
+    Step1["Step 1<br>Motor Plant<br>(Continuous ODEs)"] --> Step2["Step 2<br>Encoder Model<br>(1000 CPR Quantization)"]
+    Step2 --> Step3["Step 3<br>PWM Actuator<br>(Averaged H-Bridge)"]
+    Step3 --> Step4["Step 4<br>Continuous PID<br>(Step Response)"]
+    Step4 --> Step5["Step 5<br>Discrete PID & Profile<br>(1 kHz, Trapezoidal FF)"]
+    Step5 --> Step6["Step 6<br>Robust Control<br>(Load & Friction FF)"]
+
+    style Step1 fill:#2d6a4f,color:#fff
+    style Step2 fill:#2d6a4f,color:#fff
+    style Step3 fill:#2d6a4f,color:#fff
+    style Step4 fill:#2d6a4f,color:#fff
+    style Step5 fill:#2d6a4f,color:#fff
+    style Step6 fill:#1b4332,color:#fff,stroke:#52b788,stroke-width:2px
+```
+
+### Breakdown of Stage 1 Steps
+
+#### Step 1 — Electromechanical DC Motor Plant
+* **Focus:** Continuous-time differential equations governing motor electrical and mechanical dynamics.
+* **Equations:**
+  $$\frac{di}{dt} = \frac{1}{L} \left( V_{eff}(t) - R \cdot i(t) - K_e \cdot \omega(t) \right)$$
+  $$\frac{d\omega}{dt} = \frac{1}{J} \left( K_t \cdot i(t) - B \cdot \omega(t) - T_L(t) \right)$$
+* **Verification:** Applied step input voltage $V_{app} = 12.0\text{ V}$. Steady-state speed reached $\omega_{ss} = 239.4710\text{ rad/s}$ ($2286.78\text{ RPM}$), matching analytical derivation within $0.0209\%$ relative error.
+
+#### Step 2 — Encoder Measurement & Spatial Quantization
+* **Focus:** Modeling finite spatial resolution using a 250 PPR quadrature optical encoder ($1000\text{ CPR}$).
+* **Quantization Logic:**
+  $$N_{count}[k] = \left\lfloor \theta_{true}(t) \cdot \frac{1000}{2\pi} \right\rfloor, \quad \theta_{enc}[k] = N_{count}[k] \cdot \frac{2\pi}{1000}$$
+* **Verification:** True shaft angle vs. quantized encoder angle verified under open-loop step motion. Position error is strictly bounded by $|e_{true}| \le 0.3599^\circ \le 0.3600^\circ$ ($1.0\text{ count}$).
+
+#### Step 3 — Averaged PWM H-Bridge Driver Model
+* **Focus:** Duty cycle scaling $d(t) \in [0.0, 1.0]$ mapped to effective terminal voltage $V_{eff} = d \cdot V_{dc}$ ($V_{dc} = 12.0\text{ V}$).
+* **Verification:** Step duty cycle inputs $d = 0.75$ ($9.0\text{ V}$) and $d = 1.00$ ($12.0\text{ V}$) confirmed perfect linear speed scaling with $0.0000\%$ ratio error.
+
+#### Step 4 — Continuous Closed-Loop Position Control
+* **Focus:** Continuous parallel PID controller ($K_p = 1.0, K_i = 0.10, K_d = 0.050, N = 1000$) driving unprofiled 90° step command.
+* **Verification:** Achieved $0.00\%$ overshoot, 2% settling time $t_s = 78.4\text{ ms}$, and final steady-state error $0.0384^\circ \le 0.3600^\circ$ ($0.11\text{ counts}$).
+
+#### Step 5 — 1 kHz Discrete Trajectory Control & Multi-Move Indexing
+* **Focus:** Discretizing control loop to $1\text{ kHz}$ ($T_s = 1\text{ ms}$), adding trapezoidal kinematic profile generation ($a_{max} = 50\text{ rad/s}^2, \omega_{max} = 8\text{ rad/s}$), conditional anti-windup integration clamping, and velocity/acceleration feedforward gains ($K_{ff,v}, K_{ff,a}$).
+* **Verification:** Dynamic tracking error constrained to $\|e_{true}\|_{max} = 0.4456^\circ \le 1.7200^\circ$, peak armature current $i_{peak} = 0.0506\text{ A} \le 1.50\text{ A}$, and $3\times$ sequential move positioning error $0.1247^\circ$.
+
+#### Step 6 — Robustness, Disturbance Rejection & Non-Linear Friction Analysis
+* **Focus:** Stress-testing the discrete controller under in-motion step load disturbance ($T_L = 0.010\text{ N}\cdot\text{m}$ at $t=0.20\text{s}$), in-dwell pulse disturbance ($t=0.60\text{s}$), continuous Stribeck friction ($T_{stick} = 0.0020\text{ N}\cdot\text{m}, T_{coulomb} = 0.0010\text{ N}\cdot\text{m}$), and payload inertia sweeps ($1\times, 2\times, 3\times J_0$).
+* **Feedforward Additions:**
+  * Physics load feedforward: $K_{ff,L} = \frac{R}{V_{dc} \cdot K_t} = 0.833333\text{ N}^{-1}\cdot\text{m}^{-1}$
+  * Continuous friction feedforward: $u_{ff,fric}(\omega_{ref}) = K_{ff,L} \cdot \left[ T_{coulomb} + (T_{stick} - T_{coulomb}) e^{-(\omega_{ref}/\omega_s)^2} \right] \cdot \tanh(1000 \cdot \omega_{ref})$
+* **Verification:** In-motion error bounded at $0.5218^\circ$, in-dwell pulse deviation held to $0.2786^\circ \le 0.3600^\circ$ ($0\text{ ms}$ recovery time), final friction true position error $0.1512^\circ$ ($0\text{ encoder counts}$), and $3\times J_0$ inertia sweep tracking error held to $0.7201^\circ \le 1.7200^\circ$.
+
+---
+
+## 7. How the Stage 1 Prototype Works
+The complete Stage 1 control loop functions as an integrated discrete-continuous hybrid system:
+
+```
+                                              +-------------------------------------------------------------+
+                                              |                   PHYSICAL FEEDFORWARD                      |
+                                              |  u_ff,v = Kff_v * w_ref    u_ff,a = Kff_a * a_ref           |
+                                              |  u_ff,L = Kff_L * TL_est   u_ff,fric = f(w_ref)             |
+                                              +------------------------------+------------------------------+
+                                                                             |
+                                                                             v
++-----------------------+     theta_ref     +------------------+  u_pid   +---+  u_total  +----------------+  V_eff  +-----------------+
+| Trapezoidal Kinematic |------------------>| Discrete PID     |--------->| + |---------->| Averaged PWM   |-------->| Electromechanical|
+| Profile Generator     |  w_ref, a_ref     | Controller       |          +---+           | H-Bridge Model |         | DC Motor Plant  |
++-----------------------+   (1 kHz)         | (Ts = 1 ms)      |            ^             +----------------+         +--------+--------+
+                                            +------------------+            |                                                | w(t), theta_true
+                                                      ^                     | Load Disturbance T_L(t)                        v
+                                                      |                     v Striction & Coulomb Friction         +------------------+
+                                                      |             +---------------+                              | 1000 CPR Optical |
+                                                      +-------------| Quantization  |<-----------------------------| Quadrature       |
+                                                       theta_enc    | floor(N_c)    |          theta_true          | Encoder          |
+                                                                    +---------------+                              +------------------+
+```
+
+1. **Trajectory Planning:** The profile generator computes continuous reference position $\theta_{ref}(t)$, velocity $\omega_{ref}(t)$, and acceleration $a_{ref}(t)$ commands constrained by kinematic bounds.
+2. **Error Calculation:** The discrete PID controller calculates position error $e[k] = \theta_{ref}[k] - \theta_{enc}[k]$ using **only the quantized encoder measurement** $\theta_{enc}[k]$.
+3. **Feedforward Summation:** Model-based feedforward terms ($u_{ff,v}, u_{ff,a}, u_{ff,L}, u_{ff,fric}$) are summed directly with PID control voltage $u_{pid}[k]$.
+4. **Actuator Saturation:** Total control effort $u_{total}[k]$ is normalized into duty cycle $d[k] \in [0.0, 1.0]$, driving the continuous motor plant via effective voltage $V_{eff} = d \cdot V_{dc}$.
+5. **Plant Dynamics & Feedback:** Motor continuous equations integrate true shaft position $\theta_{true}(t)$, which is floor-quantized by the 1000 CPR encoder model to form feedback $\theta_{enc}[k+1]$.
+
+---
+
+## 8. Stage 1 Verification & Results
+
+Every step in Stage 1 was evaluated in MATLAB R2025a using ODE45 simulations and validated against quantitative limits:
+
+| Step | Technical Objective | Key Measured Simulation Metric | Target / Acceptance Limit | Verdict |
+| :--- | :--- | :--- | :--- | :--- |
+| **Step 1** | Motor Plant Steady-State Speed | $\omega_{ss} = 239.4710\text{ rad/s}$ ($2286.78\text{ RPM}$) | Relative Speed Error $\le 0.05\%$ ($0.0209\%$ err) | **PASS** |
+| **Step 2** | Encoder Quantization Bound | $|e_{true}|_{max} = 0.3599^\circ \le 0.3600^\circ$ | Position Error $\le 1.0\text{ count}$ ($0.3600^\circ$) | **PASS** |
+| **Step 3** | Averaged PWM Actuation Linearity | $d=0.75 \implies \omega_{ss}=179.6033\text{ rad/s}$ | Linearity Ratio Error $\le 0.01\%$ ($0.0000\%$ err) | **PASS** |
+| **Step 4** | Continuous Closed-Loop Step Response | Overshoot $= 0.00\%$, $t_s = 78.4\text{ ms}$, $e_{ss} = 0.0384^\circ$ | Overshoot $< 2.0\%$, $e_{ss} \le 0.3600^\circ$ | **PASS** |
+| **Step 5** | 1 kHz Discrete PID Trajectory Profiling | $\|e_{true}\|_{max} = 0.4456^\circ$, $i_{peak} = 0.0506\text{ A}$ | $\|e\|_{max} \le 1.7200^\circ$, $i_{peak} \le 1.50\text{ A}$ | **PASS** |
+| **Step 6** | Disturbance, Friction & Inertia | In-motion error $0.5218^\circ$, pulse dev $0.2786^\circ$ ($0\text{ms}$ rec) | Pulse Dev $\le 0.3600^\circ$, $t_{rec} \le 50\text{ ms}$, $3\times J_0$ pass | **PASS** |
+
+---
+
+## 9. Current Limitations & Prototype Assumptions
+To maintain full technical credibility, the following simulation-prototype boundaries are explicitly documented:
+
+1. **Direct Load Torque Feedforward ($T_{L,est}$):** In Step 6, load feedforward ($u_{ff,L} = K_{ff,L} \cdot T_{L,est}$) relies on direct knowledge of the load disturbance torque. This is acceptable for a software simulation prototype. Stage 2 will replace this oracle signal with a sensorless **Disturbance Observer (DOB)**.
+2. **Reference Velocity Friction Feedforward ($\omega_{ref}$):** Stribeck friction cancellation uses ideal profile velocity $\omega_{ref}$ during dwell to prevent encoder quantization noise amplification. Stage 2 will introduce discrete velocity filtering for measured speed $\hat{\omega}$.
+3. **Idealized Power Electronics:** The PWM H-Bridge driver uses averaged voltage scaling ($V_{eff} = d \cdot V_{dc}$) without simulating MOSFET switching dead-time or high-frequency switching harmonics.
+4. **Absence of Hardware:** Stage 1 contains no physical C code, STM32 HAL drivers, or hardware bench measurements.
+
+---
+
+## 10. Repository Structure
 
 ```text
-Desired Position
-       │
-       ▼
- Motion Profile
-       │
-       ▼
- Controller
-       │
-       ▼
- PWM / Motor Driver
-       │
-       ▼
-     Motor
-       │
-       ▼
- Mechanical System
-       │
-       ▼
-    Encoder
-       │
-       ▼
- Quantized Measurement
-       │
-       └──────────────► Controller
-
-Every block introduces limitations.
-
-For example:
-
-Encoder limitation
-
-A 1000-CPR encoder provides:
-
-360° / 1000 = 0.36° per count
-
-Therefore, the controller cannot assume infinitely precise position information.
-
-Mechanical disturbance
-
-A change in payload or an external load torque can cause the motor to deviate from the commanded trajectory.
-
-Friction
-
-Static, Coulomb and velocity-dependent friction can produce nonlinear behaviour that is not captured by a simple ideal motor model.
-
-Embedded implementation
-
-A controller designed in continuous time must eventually operate with:
-
-finite sampling frequency
-discrete calculations
-finite numerical precision
-timer-driven execution
-encoder measurements
-PWM hardware
-
-This is why the project is being developed incrementally.
-
-4. Proposed Solution
-
-The proposed system is a closed-loop precision indexing controller with a staged transition from simulation to embedded hardware.
-
-The complete concept is:
-
-                    COMMAND
-                       │
-                       ▼
-             Desired Angular Position
-                       │
-                       ▼
-              Trajectory Generator
-                       │
-                       ▼
-                Position Controller
-                       │
-                       ▼
-              Feedforward / Control
-                       │
-                       ▼
-                 PWM / H-Bridge
-                       │
-                       ▼
-                    DC Motor
-                       │
-                       ▼
-              Mechanical Load
-                       │
-                       ▼
-                   Encoder
-                       │
-                       ▼
-              Position Measurement
-                       │
-                       ▼
-             Velocity / Disturbance
-                  Estimation
-                       │
-                       ▼
-                 Feedback Loop
-                       │
-                       └──────────────► Controller
-
-The long-term system will progressively replace ideal simulation information with quantities that can actually be measured or estimated on an embedded controller.
-
-5. Complete Project Development Plan
-
-The project is divided into three major stages.
-
-┌──────────────────────────────────────────────┐
-│                  STAGE 1                     │
-│          Simulation Prototype                │
-│                                              │
-│ MATLAB + Simulink                            │
-│ Motor → Encoder → PWM → PID → Robustness   │
-└──────────────────────┬───────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────┐
-│                  STAGE 2                     │
-│       Embedded Control Architecture          │
-│                                              │
-│ STM32-oriented discrete implementation      │
-│ Encoder velocity estimation                  │
-│ Disturbance Observer                         │
-│ Embedded control architecture                │
-└──────────────────────┬───────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────┐
-│                  STAGE 3                     │
-│        Hardware Implementation               │
-│                                              │
-│ STM32 + Motor Driver + Encoder + Motor      │
-│ Real-time experiments                        │
-│ Disturbance / payload testing                │
-│ Experimental validation                      │
-└──────────────────────────────────────────────┘
-Current progress
-Stage	Description	Status
-Stage 1	MATLAB/Simulink simulation prototype	Completed
-Stage 2	Embedded control architecture	Planned
-Stage 3	Physical STM32 hardware implementation and experiments	Planned
-
-Only Stage 1 has been implemented and validated at the moment.
-
-This repository therefore represents the simulation baseline of the complete project, not a claim that the STM32 hardware system has already been completed.
-
-6. Stage 1 — Simulation Prototype
-
-Stage 1 was developed to answer one fundamental question:
-
-Does the proposed control architecture work before moving to embedded hardware?
-
-The simulation was built progressively rather than creating one large model from the beginning.
-
-This makes it possible to isolate and verify each part of the system.
-
-Stage 1 contains six steps.
-
-7. Stage 1 Workflow
-
-The complete Stage 1 workflow is:
-
-                     STAGE 1
-                       │
-                       ▼
-          ┌─────────────────────────┐
-          │ Step 1                  │
-          │ DC Motor Plant          │
-          │ Electromechanical Model │
-          └────────────┬────────────┘
-                       │
-                       ▼
-          ┌─────────────────────────┐
-          │ Step 2                  │
-          │ Encoder Quantization     │
-          │ 1000 CPR                │
-          └────────────┬────────────┘
-                       │
-                       ▼
-          ┌─────────────────────────┐
-          │ Step 3                  │
-          │ PWM / H-Bridge          │
-          │ Actuator Model          │
-          └────────────┬────────────┘
-                       │
-                       ▼
-          ┌─────────────────────────┐
-          │ Step 4                  │
-          │ Closed-Loop Position    │
-          │ Control                 │
-          └────────────┬────────────┘
-                       │
-                       ▼
-          ┌─────────────────────────┐
-          │ Step 5                  │
-          │ 1 kHz Discrete PID      │
-          │ + Trajectory Profile    │
-          └────────────┬────────────┘
-                       │
-                       ▼
-          ┌─────────────────────────┐
-          │ Step 6                  │
-          │ Robustness Testing      │
-          │ Load + Friction +       │
-          │ Inertia Variation       │
-          └────────────┬────────────┘
-                       │
-                       ▼
-             STAGE 1 VALIDATED
-             SIMULATION BASELINE
-
-Each step adds one layer of realism.
-
-8. Stage 1 — Step-by-Step Development
-Step 1 — Electromechanical DC Motor Model
-
-The first step establishes the motor plant.
-
-The motor is represented using its electrical and mechanical dynamics.
-
-The model includes parameters such as:
-
-Armature resistance
-Armature inductance
-Motor torque constant
-Back-EMF constant
-Rotor/load inertia
-Mechanical friction
-
-The purpose of this step is to make sure the basic plant behaves as expected before introducing the control loop.
-
-Result
-
-The simulated steady-state motor speed was:
-
-239.4710 rad/s
-
-or approximately:
-
-2286.78 RPM
-
-The measured result remained within the defined plant-model tolerance.
-
-Status: PASS
-
-9. Step 2 — Encoder Quantization
-
-A real encoder does not provide continuous position information.
-
-The simulation therefore introduces a:
-
-1000 CPR encoder
-
-with a position resolution of:
-
-360° / 1000
-= 0.36° / count
-
-The purpose of this step is to test the controller using a realistic quantized position measurement rather than an ideal continuous position.
-
-Result
-
-Maximum encoder quantization error:
-
-0.3599°
-
-Acceptance limit:
-
-0.3600°
-
-Status: PASS
-
-10. Step 3 — PWM / H-Bridge Model
-
-The controller cannot directly control motor torque.
-
-The control command is converted into an actuator command through the PWM/H-Bridge stage.
-
-The simulation therefore establishes the relationship:
-
-Controller output
-       │
-       ▼
-PWM duty cycle
-       │
-       ▼
-Average H-Bridge voltage
-       │
-       ▼
-Motor
-
-This step checks whether the simulated actuator behaves consistently with the expected motor response.
-
-Example result
-
-For:
-
-Duty cycle = 0.75
-
-the simulated steady-state speed was:
-
-179.6033 rad/s
-
-The measured actuator response remained within the defined linearity tolerance.
-
-Status: PASS
-
-11. Step 4 — Closed-Loop Position Control
-
-The next step closes the position feedback loop.
-
-The architecture becomes:
-
-Target Position
-      │
-      ▼
-    Error
-      │
-      ▼
- Controller
-      │
-      ▼
- PWM / Motor
-      │
-      ▼
- Position
-      │
-      ▼
- Encoder
-      │
-      └──────────► Feedback
-
-The purpose is to determine whether the mechanism can reach the commanded position with acceptable transient behaviour and steady-state accuracy.
-
-Measured results
-Overshoot: 0.00%
-Settling time: 78.4 ms
-Steady-state error: 0.0384°
-
-Status: PASS
-
-12. Step 5 — Discrete 1 kHz Controller
-
-A real STM32 controller will not operate using continuous-time mathematics.
-
-The controller therefore needs to operate at a defined sampling frequency.
-
-The Stage 1 controller was converted to a:
-
-1 kHz discrete-time control loop
-
-A trajectory profile is also introduced so that the mechanism does not simply attempt to jump instantaneously to the target position.
-
-The conceptual flow becomes:
-
-Position Command
-       │
-       ▼
-Trajectory Generator
-       │
-       ▼
-Reference Position
-       │
-       ▼
-Discrete PID @ 1 kHz
-       │
-       ▼
-PWM
-       │
-       ▼
-Motor
-       │
-       ▼
-Encoder
-       │
-       └──────────► Feedback
-Measured result
-
-Maximum dynamic tracking error:
-
-0.4456°
-
-The result remained within the defined Stage 1 dynamic error limit.
-
-Status: PASS
-
-13. Step 6 — Robustness Testing
-
-The final Stage 1 step deliberately moves away from ideal conditions.
-
-The controller is tested against several disturbances and parameter variations.
-
-Test 1 — In-motion load disturbance
-
-A load torque of:
-
-0.010 N·m
-
-was introduced during motion.
-
-Measured maximum tracking error:
-
-0.5218°
-
-Peak armature current:
-
-0.2486 A
-
-Test 2 — In-dwell disturbance
-
-A load disturbance was introduced while the mechanism was at its target position.
-
-Measured maximum position deviation:
-
-0.2786°
-
-This corresponds to less than one encoder count:
-
-0.2786° < 0.36°
-
-Measured recovery time:
-
-0 ms
-
-Test 3 — Nonlinear friction
-
-The simulation includes nonlinear Stribeck-type friction.
-
-The final true position error was:
-
-0.1512°
-
-The final encoder position error was:
-
-0.0000°
-
-Test 4 — Payload inertia variation
-
-The payload inertia was varied to:
-
-1 × nominal
-2 × nominal
-3 × nominal
-
-Measured errors:
-
-Inertia	Maximum/Final Error
-1×	0.4706°
-2×	0.2848°
-3×	0.7201°
-
-All remained within the Stage 1 acceptance requirement.
-
-Step 6 Status: PASS
-
-14. Stage 1 Final Result
-
-The complete Stage 1 regression test covers all six steps.
-
-Step	Description	Result
-1	DC motor plant	PASS
-2	Encoder quantization	PASS
-3	PWM / H-Bridge linearity	PASS
-4	Closed-loop position control	PASS
-5	1 kHz discrete PID + trajectory	PASS
-6	Disturbance, friction & inertia testing	PASS
-
-The Stage 1 automated regression suite completed successfully.
-
-Stage 1 conclusion
-
-The simulation prototype satisfies the defined Stage 1 acceptance criteria.
-
-This provides the baseline for the next phase of the project.
-
-15. What Stage 1 Does — and Does Not — Prove
-
-This distinction is important.
-
-Stage 1 proves
-
-The simulation demonstrates that the proposed control architecture can:
-
-model the motor dynamics
-operate with encoder quantization
-control the motor through PWM
-perform closed-loop position control
-operate at a 1 kHz discrete control rate
-follow a trajectory
-tolerate defined load disturbances
-tolerate nonlinear friction
-tolerate payload inertia variations
-Stage 1 does NOT prove
-
-The current repository does not demonstrate:
-
-STM32 firmware execution
-real-time MCU performance
-physical motor behaviour
-real encoder measurements
-real PWM output
-motor-driver behaviour
-hardware electrical limitations
-sensor noise in a physical system
-hardware disturbance rejection
-
-Those questions belong to the later stages.
-
-16. Stage 2 — Embedded Control Architecture
-
-Stage 2 will begin the transition from simulation to embedded implementation.
-
-The main challenge is that some information available directly inside a simulation will not be available to an STM32 controller.
-
-For example, Stage 1 can directly use the simulated load torque.
-
-A real controller cannot simply read the actual external load torque.
-
-Therefore Stage 2 will introduce estimation.
-
-The planned architecture includes:
-
-Disturbance Observer
-
-A discrete disturbance observer will estimate the combined disturbance acting on the system.
-
-Conceptually:
-
-PWM Command
-     │
-     ▼
-   Motor
-     │
-     ├──────────────► Encoder
-     │                   │
-     │                   ▼
-     │             Position / Velocity
-     │                   │
-     ▼                   ▼
-             Disturbance Observer
-                     │
-                     ▼
-              Estimated Disturbance
-                     │
-                     ▼
-                 Controller
-Encoder velocity estimation
-
-Stage 2 will also replace ideal/reference velocity information with velocity estimated from encoder measurements.
-
-Embedded implementation
-
-The control algorithm will then be structured for execution on an STM32 microcontroller.
-
-The exact MCU, peripheral configuration and implementation details will be finalized during Stage 2.
-
-17. Stage 3 — Hardware Implementation & Experimentation
-
-After the embedded control architecture has been verified, the project will move to physical experimentation.
-
-The intended hardware chain is:
-
-                 STM32
-                   │
-          ┌────────┴────────┐
-          │                 │
-          ▼                 ▼
-      PWM Output        Encoder Input
-          │                 ▲
-          ▼                 │
-     Motor Driver           │
-          │                 │
-          ▼                 │
-        DC Motor ───────────┘
-          │
-          ▼
-     Mechanical Load
-
-Stage 3 will investigate the difference between:
-
-Simulation
-    vs.
-Embedded execution
-    vs.
-Physical experiment
-
-The hardware experiments are expected to evaluate:
-
-Position accuracy
-Settling time
-Tracking error
-Encoder behaviour
-Disturbance rejection
-Payload variation
-Friction effects
-Current response
-Controller timing
-Real-world repeatability
-
-The final objective is to determine how closely the physical system follows the validated simulation model.
-
-18. Complete Project Workflow
-
-The complete development philosophy can therefore be summarized as:
-
-                 PROJECT START
-                      │
-                      ▼
-              Define Requirements
-                      │
-                      ▼
-              Build Motor Model
-                      │
-                      ▼
-             Add Encoder Effects
-                      │
-                      ▼
-              Add PWM / Actuator
-                      │
-                      ▼
-            Develop Position Loop
-                      │
-                      ▼
-            Discretize Controller
-                      │
-                      ▼
-           Test Robustness
-                      │
-                      ▼
-        ┌──────────────────────────┐
-        │        STAGE 1           │
-        │  Simulation Validation   │
-        └────────────┬─────────────┘
-                     │
-                     ▼
-        ┌──────────────────────────┐
-        │        STAGE 2           │
-        │ Embedded Architecture    │
-        │                          │
-        │ DOB + Velocity Estimator │
-        │ + MCU Control            │
-        └────────────┬─────────────┘
-                     │
-                     ▼
-        ┌──────────────────────────┐
-        │        STAGE 3           │
-        │ Hardware Implementation  │
-        │                          │
-        │ STM32 + Motor + Encoder  │
-        │ + Driver + Load          │
-        └────────────┬─────────────┘
-                     │
-                     ▼
-             Hardware Testing
-                     │
-                     ▼
-        Compare Simulation vs Real
-                     │
-                     ▼
-             Final Validation
-19. Repository Structure
-stm32-precision-indexing-control/
+Project2/
 │
-├── models/
-│   ├── stage1_motor_plant.slx
-│   ├── stage1_encoder_quantization.slx
-│   ├── stage1_pwm_model.slx
-│   ├── stage1_position_control.slx
-│   ├── stage1_discrete_pid.slx
-│   └── stage1_robust_loop_model.slx
+├── README.md                           # Master GitHub documentation & roadmap (this file)
+├── LICENSE                             # Project software license file
+├── .gitignore                          # Production ignore rules for MATLAB/Simulink/Python cache
+├── run_stage1.m                        # Top-level single-command execution entry point
+├── test_stage1.m                       # Top-level automated regression test entry point
 │
-├── scripts/
-│   ├── params.m
-│   ├── build_and_run_stage1.m
-│   ├── build_and_run_stage2.m
-│   ├── build_and_run_stage3.m
-│   ├── build_and_run_stage4.m
-│   ├── build_and_run_stage5.m
-│   ├── build_and_run_stage6.m
-│   └── test_stage1.m
+├── models/                             # Simulink models (.slx)
+│   ├── stage1_motor_plant.slx          # Step 1: Motor electromechanical plant ODE model
+│   ├── stage1_encoder_model.slx        # Step 2: 1000 CPR encoder floor quantization model
+│   ├── stage1_pwm_model.slx            # Step 3: Averaged PWM H-bridge driver model
+│   ├── stage1_closed_loop_model.slx    # Step 4: Continuous parallel PID position model
+│   ├── stage1_profiled_loop_model.slx   # Step 5: 1 kHz discrete PID + trapezoidal profile model
+│   └── stage1_robust_loop_model.slx     # Step 6: Robust PID + load & Stribeck friction model
 │
-├── results/
-│   └── stage1/
+├── scripts/                            # MATLAB & Python automation scripts
+│   ├── params.m                        # Central master system parameters
+│   ├── run_stage1.m                    # Authoritative execution script
+│   ├── test_stage1.m                   # Authoritative automated regression test script
+│   ├── build_and_run_stage1.m ... stage6.m # Step-by-step verification scripts
+│   └── generate_stage2_plots.py ... stage6.py # Figure dashboard plot generators
 │
-├── plots/
-│   └── stage1/
+├── results/stage1/                     # Executable simulation datasets (.mat)
+│   └── stage1_data.mat ... stage6_data.mat
 │
-├── docs/
-│   ├── STAGE_1_OVERVIEW.md
-│   ├── STAGE_1_STEP_1.md
-│   ├── STAGE_1_STEP_2.md
-│   ├── STAGE_1_STEP_3.md
-│   ├── STAGE_1_STEP_4.md
-│   ├── STAGE_1_STEP_5.md
-│   ├── STAGE_1_STEP_6.md
-│   ├── STAGE_1_FINAL_REPORT.md
-│   ├── STAGE_1_FINAL_VERIFICATION.md
-│   └── STAGE_1_REPRODUCIBILITY.md
+├── plots/stage1/                       # High-resolution figure dashboards (.png)
+│   └── 20 publication-quality PNG figure dashboards
 │
-├── audit/
-│   └── Stage 1 verification and audit documents
+├── docs/                               # Engineering documentation suite
+│   ├── STAGE_1_OVERVIEW.md             # 21-point system architecture specification
+│   ├── STAGE_1_FINAL_REPORT.md         # 21-section comprehensive engineering report
+│   ├── STAGE_1_FINAL_VERIFICATION.md   # Formal step acceptance matrix
+│   ├── STAGE_1_REPRODUCIBILITY.md      # Reproduction guide for external engineers
+│   ├── STAGE_1_FILE_MANIFEST.md        # Itemized file inventory manifest
+│   ├── STAGE_1_INTEGRITY_MANIFEST.md   # SHA-256 asset manifest (123 entries)
+│   └── STAGE_1_STEP_1.md ... STEP_6.md # Step-by-step design documentation
 │
-├── requirements/
-│   └── python_requirements.txt
+├── audit/                              # Formal audit suite
+│   ├── STAGE1_FINAL_AUDIT.md           # 20-point technical audit report
+│   ├── STAGE1_FINAL_ACCEPTANCE.md      # Final acceptance rationale document
+│   └── STAGE_1_GITHUB_FINAL_AUDIT.md   # Master GitHub readiness report
 │
-├── run_stage1.m
-├── test_stage1.m
-├── README.md
-├── LICENSE
-└── .gitignore
-20. How to Reproduce Stage 1
-Requirements
+└── requirements/
+    └── python_requirements.txt         # Python dependency specification (numpy, scipy, matplotlib)
+```
 
-You will need:
+---
 
-MATLAB
-Simulink
-MATLAB release compatible with the included models
-Python for the supporting analysis/plot-generation scripts
+## 11. Reproducing Stage 1
 
-Python dependencies are listed in:
+### System Prerequisites
+* **MATLAB:** R2023b, R2024a, or R2025a (64-bit Windows/Linux/macOS) with base Simulink and Control System Toolbox.
+* **Python (Optional for Plot Generation):** Python 3.9+ with dependencies installed via `pip install -r requirements/python_requirements.txt`.
 
-requirements/python_requirements.txt
-Step 1 — Clone the repository
-git clone https://github.com/Navneeth09/stm32-precision-indexing-control.git
+### Execution Instructions
 
-Enter the project directory:
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/user/Project2.git
+   cd Project2
+   ```
 
-cd stm32-precision-indexing-control
-Step 2 — Open MATLAB
+2. **Launch MATLAB & Navigate to Project Root:**
+   ```matlab
+   cd('path/to/Project2')
+   ```
 
-Set the MATLAB current folder to the project root.
+3. **Run Full Simulation Pipeline (Option A):**
+   ```matlab
+   run_stage1
+   ```
+   This script builds and loads all 6 Simulink models, runs ODE45 simulations, verifies theoretical derivations, and exports raw `.mat` datasets to `results/stage1/`.
 
-For example:
+4. **Run Automated Regression Test Suite (Option B):**
+   ```matlab
+   test_stage1
+   ```
+   Expected terminal summary output:
+   ```text
+   ====================================
+   STAGE 1 REGRESSION TEST SUMMARY
+   ====================================
+   Step 1: PASS
+   Step 2: PASS
+   Step 3: PASS
+   Step 4: PASS
+   Step 5: PASS
+   Step 6: PASS
+   ------------------------------------
+   Overall: PASS
+   ====================================
+   ```
 
-cd('path/to/stm32-precision-indexing-control')
-Step 3 — Run the complete Stage 1 pipeline
-run_stage1
+5. **Headless Terminal Execution:**
+   ```bash
+   matlab -batch "test_stage1; exit;"
+   ```
 
-This executes the Stage 1 simulation workflow.
+---
 
-Step 4 — Run the regression test
+## 12. Future Work Roadmap (Stage 2 & Stage 3)
 
-After the simulations have been generated:
+### Stage 2 — Embedded STM32 Implementation (Planned)
+* **Sensorless Load Observer:** Implement a Luenberger Disturbance Observer (DOB) to estimate load torque $T_{L,est}$ directly from armature current and measured velocity.
+* **Velocity Estimation:** Implement discrete differentiation and low-pass filtering to derive measured shaft velocity $\hat{\omega}$.
+* **C Firmware Translation:** Convert discrete PID and feedforward algorithms into 32-bit floating-point C code (`float32_t`) targeted for ARM Cortex-M microcontrollers (STM32F4/G4 series).
+* **Processor-in-the-Loop (PIL):** Validate real-time code execution timing and numerical precision against Stage 1 simulation baselines.
 
-test_stage1
+### Stage 3 — Physical Hardware Validation (Planned)
+* Interfacing STM32 MCU board with an H-Bridge motor driver module (e.g., L298N / VNH5019).
+* Interfacing 250 PPR optical quadrature encoder with STM32 hardware timer encoder mode.
+* Benchmarking real-world physical positioning accuracy, overshoot, settling time, and disturbance rejection against Stage 1 simulation predictions.
 
-The regression test checks the six Stage 1 steps against their defined acceptance criteria.
+---
 
-Step 5 — Inspect the results
-
-Simulation datasets are stored under:
-
-results/stage1/
-
-Generated figures are stored under:
-
-plots/stage1/
-
-Detailed engineering documentation is available under:
-
-docs/
-21. Documentation
-
-The repository contains documentation at different levels.
-
-Start here
-README.md
-
-High-level explanation of the complete project.
-
-System architecture
-docs/STAGE_1_OVERVIEW.md
-Individual development steps
-docs/STAGE_1_STEP_1.md
-docs/STAGE_1_STEP_2.md
-docs/STAGE_1_STEP_3.md
-docs/STAGE_1_STEP_4.md
-docs/STAGE_1_STEP_5.md
-docs/STAGE_1_STEP_6.md
-Final engineering report
-docs/STAGE_1_FINAL_REPORT.md
-Verification
-docs/STAGE_1_FINAL_VERIFICATION.md
-Reproduction guide
-docs/STAGE_1_REPRODUCIBILITY.md
-
-The audit/ directory contains additional verification and audit records from the Stage 1 development process.
-
-22. Current Limitations
-
-The current implementation is intentionally limited to the simulation prototype.
-
-Important limitations include:
-
-The motor is represented by a mathematical simulation model.
-The encoder is simulated rather than physically measured.
-PWM/H-Bridge behaviour is represented by a simulation model.
-Load torque is available directly inside the simulation environment.
-Some friction/feedforward information is available that would not be directly available to an embedded controller.
-No STM32 firmware has been executed yet.
-No physical motor or encoder experiment has been performed yet.
-
-These are not hidden limitations — they define the boundary between the completed Stage 1 work and the future stages.
-
-23. Current Project Status
-Stage 1 — Simulation Prototype
-████████████████████  100%
-
-Stage 2 — Embedded Control
-░░░░░░░░░░░░░░░░░░░░    0%
-
-Stage 3 — Hardware Experimentation
-░░░░░░░░░░░░░░░░░░░░    0%
-Current milestone
-
-Stage 1 completed and verified.
-
-The next development milestone is the transition from the validated Simulink controller to an embedded-oriented control architecture.
-
-24. Why the Project Is Being Developed This Way
-
-The purpose of the staged approach is not simply to make the project longer.
-
-Each stage answers a different engineering question.
-
-Stage 1 asks:
-
-Does the control concept work?
-
-Stage 2 asks:
-
-Can the control concept be implemented using the information and computational resources available to an embedded controller?
-
-Stage 3 asks:
-
-Does the controller still work when connected to real hardware?
-
-This separation makes it possible to identify where a problem originates.
-
-For example:
-
-If Stage 1 fails
-      ↓
-Control/model problem
-
-If Stage 1 passes but Stage 2 fails
-      ↓
-Discretization / estimation /
-embedded implementation problem
-
-If Stage 2 passes but Stage 3 fails
-      ↓
-Hardware / modelling /
-noise / mechanical problem
-
-This is the main reason for building the project incrementally.
-
-25. Final Note
-
-This repository currently represents the first milestone of a larger embedded control project.
-
-The simulation prototype is not being presented as a replacement for hardware testing.
-
-Instead, it provides a controlled baseline from which the embedded and hardware stages can be developed.
-
-The intended progression is:
-
-Model → Simulate → Verify → Discretize → Embed → Experiment → Compare
-
-Stage 1 completes the first part of that journey.
+## 13. License & Citation
+This project is released under the open-source MIT License. See [LICENSE](LICENSE) for details.
