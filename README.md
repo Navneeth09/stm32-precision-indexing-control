@@ -165,8 +165,8 @@ flowchart LR
 * **Verification:** Achieved $0.00\%$ overshoot, 2% settling time $t_s = 78.4\text{ ms}$, and final steady-state error $0.0384^\circ \le 0.3600^\circ$ ($0.11\text{ counts}$).
 
 #### Step 5 — 1 kHz Discrete Trajectory Control & Multi-Move Indexing
-* **Focus:** Discretizing control loop to $1\text{ kHz}$ ($T_s = 1\text{ ms}$), adding trapezoidal kinematic profile generation ($a_{max} = 50\text{ rad/s}^2, \omega_{max} = 8\text{ rad/s}$), conditional anti-windup integration clamping, and velocity/acceleration feedforward gains ($K_{ff,v}, K_{ff,a}$).
-* **Verification:** Dynamic tracking error constrained to $\|e_{true}\|_{max} = 0.4456^\circ \le 1.7200^\circ$, peak armature current $i_{peak} = 0.0506\text{ A} \le 1.50\text{ A}$, and $3\times$ sequential move positioning error $0.1247^\circ$.
+* **Focus:** Discretizing the control loop to $1\,\text{kHz}$ ($T_s = 1\,\text{ms}$), adding a trapezoidal kinematic profile generator ($a_{\max} = 50\,\text{rad/s}^2$, $\omega_{\max} = 8\,\text{rad/s}$), implementing conditional anti-windup integration clamping, and adding velocity and acceleration feedforward gains ($K_{ff,v}$, $K_{ff,a}$).
+* **Verification:** Dynamic tracking error was limited to **0.4456°** (target: ≤ 1.7200°), peak armature current was **0.0506 A** (limit: ≤ 1.50 A), and the maximum positioning error across three sequential moves was **0.1247°**.
 
 #### Step 6 — Robustness, Disturbance Rejection & Non-Linear Friction Analysis
 * **Focus:** Stress-testing the discrete controller under in-motion step load disturbance ($T_L = 0.010\text{ N}\cdot\text{m}$ at $t=0.20\text{s}$), in-dwell pulse disturbance ($t=0.60\text{s}$), continuous Stribeck friction ($T_{stick} = 0.0020\text{ N}\cdot\text{m}, T_{coulomb} = 0.0010\text{ N}\cdot\text{m}$), and payload inertia sweeps ($1\times, 2\times, 3\times J_0$).
@@ -214,13 +214,13 @@ The complete Stage 1 control loop functions as an integrated discrete-continuous
 Every step in Stage 1 was evaluated in MATLAB R2025a using ODE45 simulations and validated against quantitative limits:
 
 | Step | Technical Objective | Key Measured Simulation Metric | Target / Acceptance Limit | Verdict |
-| :--- | :--- | :--- | :--- | :--- |
-| ** 1** | Motor Plant Steady-State Speed | $\omega_{ss} = 239.4710\text{ rad/s}$ ($2286.78\text{ RPM}$) | Relative Speed Error $\le 0.05\%$ ($0.0209\%$ err) | **PASS** |
-| **2** | Encoder Quantization Bound | $\lvert e_{true}\rvert_{max} = 0.3599^\circ$ | Position Error $\le 1.0$ count ($0.3600^\circ$) | **PASS** |
-| ** 3** | Averaged PWM Actuation Linearity | $d=0.75 \implies \omega_{ss}=179.6033\text{ rad/s}$ | Linearity Ratio Error $\le 0.01\%$ ($0.0000\%$ err) | **PASS** |
-| ** 4** | Continuous Closed-Loop Step Response | Overshoot $= 0.00\%$, $t_s = 78.4\text{ ms}$, $e_{ss} = 0.0384^\circ$ | Overshoot $< 2.0\%$, $e_{ss} \le 0.3600^\circ$ | **PASS** |
-| ** 5** | 1 kHz Discrete PID Trajectory Profiling | $\|e_{true}\|_{max} = 0.4456^\circ$, $i_{peak} = 0.0506\text{ A}$ | $\|e\|_{max} \le 1.7200^\circ$, $i_{peak} \le 1.50\text{ A}$ | **PASS** |
-| ** 6** | Disturbance, Friction & Inertia | In-motion error $0.5218^\circ$, pulse dev $0.2786^\circ$ ($0\text{ms}$ rec) | Pulse Dev $\le 0.3600^\circ$, $t_{rec} \le 50\text{ ms}$, $3\times J_0$ pass | **PASS** |
+| :---: | :---: | :---: | :---: | :---: |
+| **1** | Motor Plant Steady-State Speed | $\omega_{ss} = 239.4710\,\text{rad/s}$ ($2286.78\,\text{RPM}$) | Relative Speed Error $\leq 0.05\%$ ($0.0209\%$ err) | **PASS** |
+| **2** | Encoder Quantization Bound | $\lvert e_{\text{true}}\rvert_{\max} = 0.3599^\circ$ | Position Error $\leq 1.0$ count ($0.3600^\circ$) | **PASS** |
+| **3** | Averaged PWM Actuation Linearity | $d = 0.75 \implies \omega_{ss} = 179.6033\,\text{rad/s}$ | Linearity Ratio Error $\leq 0.01\%$ ($0.0000\%$ err) | **PASS** |
+| **4** | Continuous Closed-Loop Step Response | Overshoot $= 0.00\%$, $t_s = 78.4\,\text{ms}$, $e_{ss} = 0.0384^\circ$ | Overshoot $< 2.0\%$, $e_{ss} \leq 0.3600^\circ$ | **PASS** |
+| **5** | 1 kHz Discrete PID Trajectory Profiling | $\lVert e_{\text{true}}\rVert_{\max} = 0.4456^\circ$, $i_{\text{peak}} = 0.0506\,\text{A}$ | $\lVert e\rVert_{\max} \leq 1.7200^\circ$, $i_{\text{peak}} \leq 1.50\,\text{A}$ | **PASS** |
+| **6** | Disturbance, Friction & Inertia | In-motion error $0.5218^\circ$, pulse deviation $0.2786^\circ$ ($0\,\text{ms}$ recovery) | Pulse Deviation $\leq 0.3600^\circ$, $t_{\text{rec}} \leq 50\,\text{ms}$, $3\times J_0$ pass | **PASS** |
 
 ---
 
@@ -271,10 +271,9 @@ Project/
 │   ├── STAGE_1_FINAL_REPORT.md         # 21-section comprehensive engineering report
 │   ├── STAGE_1_FINAL_VERIFICATION.md   # Formal step acceptance matrix
 │   ├── STAGE_1_REPRODUCIBILITY.md      # Reproduction guide for external engineers
-│   ├── STAGE_1_FILE_MANIFEST.md        # Itemized file inventory manifest
-│   ├── STAGE_1_INTEGRITY_MANIFEST.md   # SHA-256 asset manifest (123 entries)
 │   └── STAGE_1_STEP_1.md ... STEP_6.md # Step-by-step design documentation
-
+|
+├── License                             # MIT License         
 ```
 
 
@@ -293,5 +292,14 @@ Project/
 
 ---
 
-## 12. License & Citation
+## 12. Technical Glossary
+
+A technical glossary is included in the repository for quick reference to the symbols, abbreviations, parameters, and terminology used throughout the project.
+
+📘 **[View the Technical Glossary](docs/GLOSSARY.md)**
+
+Refer to this file when reading the MATLAB scripts, Simulink models, or Stage 1 documentation.
+
+
+## 13. License & Citation
 This project is released under the open-source MIT License. See [LICENSE](LICENSE) for details.
