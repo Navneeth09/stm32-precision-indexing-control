@@ -1,4 +1,4 @@
-# Project 2 — STM32 Automated Precision Indexing & Feed Control System
+# STM32 Automated Precision Indexing & Feed Control System
 
 A modeling, control design, and simulation baseline for precision rotary indexing tables, tool changers, and automated feed mechanisms driven by DC motor actuators.
 
@@ -215,12 +215,12 @@ Every step in Stage 1 was evaluated in MATLAB R2025a using ODE45 simulations and
 
 | Step | Technical Objective | Key Measured Simulation Metric | Target / Acceptance Limit | Verdict |
 | :--- | :--- | :--- | :--- | :--- |
-| **Step 1** | Motor Plant Steady-State Speed | $\omega_{ss} = 239.4710\text{ rad/s}$ ($2286.78\text{ RPM}$) | Relative Speed Error $\le 0.05\%$ ($0.0209\%$ err) | **PASS** |
-| **Step 2** | Encoder Quantization Bound | $|e_{true}|_{max} = 0.3599^\circ \le 0.3600^\circ$ | Position Error $\le 1.0\text{ count}$ ($0.3600^\circ$) | **PASS** |
-| **Step 3** | Averaged PWM Actuation Linearity | $d=0.75 \implies \omega_{ss}=179.6033\text{ rad/s}$ | Linearity Ratio Error $\le 0.01\%$ ($0.0000\%$ err) | **PASS** |
-| **Step 4** | Continuous Closed-Loop Step Response | Overshoot $= 0.00\%$, $t_s = 78.4\text{ ms}$, $e_{ss} = 0.0384^\circ$ | Overshoot $< 2.0\%$, $e_{ss} \le 0.3600^\circ$ | **PASS** |
-| **Step 5** | 1 kHz Discrete PID Trajectory Profiling | $\|e_{true}\|_{max} = 0.4456^\circ$, $i_{peak} = 0.0506\text{ A}$ | $\|e\|_{max} \le 1.7200^\circ$, $i_{peak} \le 1.50\text{ A}$ | **PASS** |
-| **Step 6** | Disturbance, Friction & Inertia | In-motion error $0.5218^\circ$, pulse dev $0.2786^\circ$ ($0\text{ms}$ rec) | Pulse Dev $\le 0.3600^\circ$, $t_{rec} \le 50\text{ ms}$, $3\times J_0$ pass | **PASS** |
+| **1** | Motor Plant Steady-State Speed | $\omega_{ss} = 239.4710\text{ rad/s}$ ($2286.78\text{ RPM}$) | Relative Speed Error $\le 0.05\%$ ($0.0209\%$ err) | **PASS** |
+| **2** | Encoder Quantization Bound | $|e_{true}|_{max} = 0.3599^\circ \le 0.3600^\circ$ | Position Error $\le 1.0\text{ count}$ ($0.3600^\circ$) | **PASS** |
+| **3** | Averaged PWM Actuation Linearity | $d=0.75 \implies \omega_{ss}=179.6033\text{ rad/s}$ | Linearity Ratio Error $\le 0.01\%$ ($0.0000\%$ err) | **PASS** |
+| **4** | Continuous Closed-Loop Step Response | Overshoot $= 0.00\%$, $t_s = 78.4\text{ ms}$, $e_{ss} = 0.0384^\circ$ | Overshoot $< 2.0\%$, $e_{ss} \le 0.3600^\circ$ | **PASS** |
+| **5** | 1 kHz Discrete PID Trajectory Profiling | $\|e_{true}\|_{max} = 0.4456^\circ$, $i_{peak} = 0.0506\text{ A}$ | $\|e\|_{max} \le 1.7200^\circ$, $i_{peak} \le 1.50\text{ A}$ | **PASS** |
+| **6** | Disturbance, Friction & Inertia | In-motion error $0.5218^\circ$, pulse dev $0.2786^\circ$ ($0\text{ms}$ rec) | Pulse Dev $\le 0.3600^\circ$, $t_{rec} \le 50\text{ ms}$, $3\times J_0$ pass | **PASS** |
 
 ---
 
@@ -284,59 +284,6 @@ Project2/
     └── python_requirements.txt         # Python dependency specification (numpy, scipy, matplotlib)
 ```
 
----
-
-## 11. Reproducing Stage 1
-
-### System Prerequisites
-* **MATLAB:** R2023b, R2024a, or R2025a (64-bit Windows/Linux/macOS) with base Simulink and Control System Toolbox.
-* **Python (Optional for Plot Generation):** Python 3.9+ with dependencies installed via `pip install -r requirements/python_requirements.txt`.
-
-### Execution Instructions
-
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/user/Project2.git
-   cd Project2
-   ```
-
-2. **Launch MATLAB & Navigate to Project Root:**
-   ```matlab
-   cd('path/to/Project2')
-   ```
-
-3. **Run Full Simulation Pipeline (Option A):**
-   ```matlab
-   run_stage1
-   ```
-   This script builds and loads all 6 Simulink models, runs ODE45 simulations, verifies theoretical derivations, and exports raw `.mat` datasets to `results/stage1/`.
-
-4. **Run Automated Regression Test Suite (Option B):**
-   ```matlab
-   test_stage1
-   ```
-   Expected terminal summary output:
-   ```text
-   ====================================
-   STAGE 1 REGRESSION TEST SUMMARY
-   ====================================
-   Step 1: PASS
-   Step 2: PASS
-   Step 3: PASS
-   Step 4: PASS
-   Step 5: PASS
-   Step 6: PASS
-   ------------------------------------
-   Overall: PASS
-   ====================================
-   ```
-
-5. **Headless Terminal Execution:**
-   ```bash
-   matlab -batch "test_stage1; exit;"
-   ```
-
----
 
 ## 12. Future Work Roadmap (Stage 2 & Stage 3)
 
