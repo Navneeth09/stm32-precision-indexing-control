@@ -140,4 +140,4 @@ The following advanced concepts belong to future project stages and are **NOT im
 ---
 
 ## How to Use This Glossary
-Refer to this document while reviewing `README.md`, the step-by-step engineering documentation in `docs/`, parameter files (`scripts/params.m`), MATLAB scripts (`build_and_run_stage*.m`), or Simulink models (`models/stage1_*.slx`). Every definition and parameter value matches the source-of-truth simulation implementation.
+Refer to this document while reviewing `README.md`, parameter files (`scripts/params.m`), MATLAB scripts (`build_and_run_stage*.m`), or Simulink models (`models/stage1_*.slx`). Every definition and parameter value matches the source-of-truth simulation implementation.
