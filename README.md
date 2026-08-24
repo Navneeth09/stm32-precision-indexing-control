@@ -215,12 +215,12 @@ Every step in Stage 1 was evaluated in MATLAB R2025a using ODE45 simulations and
 
 | Step | Technical Objective | Key Measured Simulation Metric | Target / Acceptance Limit | Verdict |
 | :--- | :--- | :--- | :--- | :--- |
-| **1** | Motor Plant Steady-State Speed | $\omega_{ss} = 239.4710\text{ rad/s}$ ($2286.78\text{ RPM}$) | Relative Speed Error $\le 0.05\%$ ($0.0209\%$ err) | **PASS** |
-| **2** | Encoder Quantization Bound | $|e_{true}|_{max} = 0.3599^\circ \le 0.3600^\circ$ | Position Error $\le 1.0\text{ count}$ ($0.3600^\circ$) | **PASS** |
-| **3** | Averaged PWM Actuation Linearity | $d=0.75 \implies \omega_{ss}=179.6033\text{ rad/s}$ | Linearity Ratio Error $\le 0.01\%$ ($0.0000\%$ err) | **PASS** |
-| **4** | Continuous Closed-Loop Step Response | Overshoot $= 0.00\%$, $t_s = 78.4\text{ ms}$, $e_{ss} = 0.0384^\circ$ | Overshoot $< 2.0\%$, $e_{ss} \le 0.3600^\circ$ | **PASS** |
-| **5** | 1 kHz Discrete PID Trajectory Profiling | $\|e_{true}\|_{max} = 0.4456^\circ$, $i_{peak} = 0.0506\text{ A}$ | $\|e\|_{max} \le 1.7200^\circ$, $i_{peak} \le 1.50\text{ A}$ | **PASS** |
-| **6** | Disturbance, Friction & Inertia | In-motion error $0.5218^\circ$, pulse dev $0.2786^\circ$ ($0\text{ms}$ rec) | Pulse Dev $\le 0.3600^\circ$, $t_{rec} \le 50\text{ ms}$, $3\times J_0$ pass | **PASS** |
+| ** 1** | Motor Plant Steady-State Speed | $\omega_{ss} = 239.4710\text{ rad/s}$ ($2286.78\text{ RPM}$) | Relative Speed Error $\le 0.05\%$ ($0.0209\%$ err) | **PASS** |
+| ** 2** | Encoder Quantization Bound | $|e_{true}|_{max} = 0.3599^\circ \le 0.3600^\circ$ | Position Error $\le 1.0\text{ count}$ ($0.3600^\circ$) | **PASS** |
+| ** 3** | Averaged PWM Actuation Linearity | $d=0.75 \implies \omega_{ss}=179.6033\text{ rad/s}$ | Linearity Ratio Error $\le 0.01\%$ ($0.0000\%$ err) | **PASS** |
+| ** 4** | Continuous Closed-Loop Step Response | Overshoot $= 0.00\%$, $t_s = 78.4\text{ ms}$, $e_{ss} = 0.0384^\circ$ | Overshoot $< 2.0\%$, $e_{ss} \le 0.3600^\circ$ | **PASS** |
+| ** 5** | 1 kHz Discrete PID Trajectory Profiling | $\|e_{true}\|_{max} = 0.4456^\circ$, $i_{peak} = 0.0506\text{ A}$ | $\|e\|_{max} \le 1.7200^\circ$, $i_{peak} \le 1.50\text{ A}$ | **PASS** |
+| ** 6** | Disturbance, Friction & Inertia | In-motion error $0.5218^\circ$, pulse dev $0.2786^\circ$ ($0\text{ms}$ rec) | Pulse Dev $\le 0.3600^\circ$, $t_{rec} \le 50\text{ ms}$, $3\times J_0$ pass | **PASS** |
 
 ---
 
@@ -237,7 +237,7 @@ To maintain full technical credibility, the following simulation-prototype bound
 ## 10. Repository Structure
 
 ```text
-Project2/
+Project/
 │
 ├── README.md                           # Master GitHub documentation & roadmap (this file)
 ├── LICENSE                             # Project software license file
@@ -274,18 +274,11 @@ Project2/
 │   ├── STAGE_1_FILE_MANIFEST.md        # Itemized file inventory manifest
 │   ├── STAGE_1_INTEGRITY_MANIFEST.md   # SHA-256 asset manifest (123 entries)
 │   └── STAGE_1_STEP_1.md ... STEP_6.md # Step-by-step design documentation
-│
-├── audit/                              # Formal audit suite
-│   ├── STAGE1_FINAL_AUDIT.md           # 20-point technical audit report
-│   ├── STAGE1_FINAL_ACCEPTANCE.md      # Final acceptance rationale document
-│   └── STAGE_1_GITHUB_FINAL_AUDIT.md   # Master GitHub readiness report
-│
-└── requirements/
-    └── python_requirements.txt         # Python dependency specification (numpy, scipy, matplotlib)
+
 ```
 
 
-## 12. Future Work Roadmap (Stage 2 & Stage 3)
+## 11. Future Work Roadmap (Stage 2 & Stage 3)
 
 ### Stage 2 — Embedded STM32 Implementation (Planned)
 * **Sensorless Load Observer:** Implement a Luenberger Disturbance Observer (DOB) to estimate load torque $T_{L,est}$ directly from armature current and measured velocity.
@@ -300,5 +293,5 @@ Project2/
 
 ---
 
-## 13. License & Citation
+## 12. License & Citation
 This project is released under the open-source MIT License. See [LICENSE](LICENSE) for details.
