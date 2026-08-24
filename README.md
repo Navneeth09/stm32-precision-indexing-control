@@ -266,12 +266,7 @@ Project/
 ├── plots/stage1/                       # High-resolution figure dashboards (.png)
 │   └── 20 publication-quality PNG figure dashboards
 │
-├── docs/                               # Engineering documentation suite
-│   ├── STAGE_1_OVERVIEW.md             # 21-point system architecture specification
-│   ├── STAGE_1_FINAL_REPORT.md         # 21-section comprehensive engineering report
-│   ├── STAGE_1_FINAL_VERIFICATION.md   # Formal step acceptance matrix
-│   ├── STAGE_1_REPRODUCIBILITY.md      # Reproduction guide for external engineers
-│   └── STAGE_1_STEP_1.md ... STEP_6.md # Step-by-step design documentation
+|── Glossary
 |
 ├── License                             # MIT License         
 ```
@@ -296,7 +291,7 @@ Project/
 
 A technical glossary is included in the repository for quick reference to the symbols, abbreviations, parameters, and terminology used throughout the project.
 
-📘 **[View the Technical Glossary](docs/GLOSSARY.md)**
+📘 **[View the Technical Glossary](GLOSSARY.md)**
 
 Refer to this file when reading the MATLAB scripts, Simulink models, or Stage 1 documentation.
 
